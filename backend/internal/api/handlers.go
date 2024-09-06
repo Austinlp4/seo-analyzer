@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/Austinlp4/seo-analyzer/backend/internal/models"
@@ -13,13 +14,23 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 	var req models.AnalysisRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.URL == "" {
+		http.Error(w, "URL is required", http.StatusBadRequest)
 		return
 	}
 
 	result, err := seo.Analyze(req.URL)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		switch err.(type) {
+		case *url.Error:
+			http.Error(w, "Invalid URL: "+err.Error(), http.StatusBadRequest)
+		default:
+			http.Error(w, "Error analyzing URL: "+err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
