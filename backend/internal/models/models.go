@@ -16,9 +16,5 @@ type AnalysisResponse struct {
 	ResponsiveDesign  bool    `json:"responsiveDesign"`
 	SSLCertificate    bool    `json:"sslCertificate"`
 	MetaRobotsContent string  `json:"metaRobotsContent"`
-}
-
-type AnalysisResult struct {
-	URL string
-	// Add other fields as needed
+	SEOScore          int     `json:"seoScore"`
 }

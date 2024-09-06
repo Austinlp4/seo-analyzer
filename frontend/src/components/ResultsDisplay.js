@@ -1,4 +1,5 @@
 import React from 'react';
+import { AnalysisCharts } from './AnalysisCharts';
 
 export function ResultsDisplay({ results }) {
   if (!results) return null;
@@ -19,6 +20,7 @@ export function ResultsDisplay({ results }) {
         <p><strong>SSL Certificate:</strong> {results.sslCertificate ? 'Yes' : 'No'}</p>
         <p><strong>Meta Robots Content:</strong> {results.metaRobotsContent || 'Not specified'}</p>
       </div>
+      <AnalysisCharts results={results} />
     </div>
   );
 }

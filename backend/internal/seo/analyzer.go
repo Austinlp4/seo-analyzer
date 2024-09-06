@@ -7,19 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Austinlp4/seo-analyzer/backend/internal/cache"
 	"github.com/Austinlp4/seo-analyzer/backend/internal/models"
 	"golang.org/x/net/html"
 )
 
 func Analyze(urlString string) (*models.AnalysisResponse, error) {
-	cache := cache.GetCache()
-
-	// Check if the result is in the cache
-	if cachedResult, found := cache.Get(urlString); found {
-		return cachedResult, nil
-	}
-
 	parsedURL, err := url.ParseRequestURI(urlString)
 	if err != nil {
 		return nil, err
@@ -60,10 +52,67 @@ func Analyze(urlString string) (*models.AnalysisResponse, error) {
 		MetaRobotsContent: extractMetaRobots(doc),
 	}
 
-	// Store the result in the cache
-	cache.Set(urlString, result)
+	result.SEOScore = calculateSEOScore(result)
 
 	return result, nil
+}
+
+// Keep the rest of the functions (extractTitle, extractMetaDescription, etc.) as they are
+
+func calculateSEOScore(result *models.AnalysisResponse) int {
+	score := 0
+
+	// Title length (ideal: 50-60 characters)
+	titleLength := len(result.Title)
+	if titleLength >= 50 && titleLength <= 60 {
+		score += 10
+	} else if titleLength > 0 {
+		score += 5
+	}
+
+	// Description length (ideal: 150-160 characters)
+	descLength := len(result.Description)
+	if descLength >= 150 && descLength <= 160 {
+		score += 10
+	} else if descLength > 0 {
+		score += 5
+	}
+
+	// H1 count (ideal: 1)
+	if result.H1Count == 1 {
+		score += 10
+	} else if result.H1Count > 1 {
+		score += 5
+	}
+
+	// Word count (minimum: 300)
+	if result.WordCount >= 300 {
+		score += 10
+	}
+
+	// Page load speed (ideal: < 3 seconds)
+	if result.PageLoadSpeed < 3 {
+		score += 20
+	} else if result.PageLoadSpeed < 5 {
+		score += 10
+	}
+
+	// Mobile-friendly
+	if result.MobileFriendly {
+		score += 15
+	}
+
+	// Responsive design
+	if result.ResponsiveDesign {
+		score += 15
+	}
+
+	// SSL certificate
+	if result.SSLCertificate {
+		score += 10
+	}
+
+	return score
 }
 
 // Existing functions: extractTitle, extractMetaDescription, countH1Tags, countWords
