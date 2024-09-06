@@ -1,21 +1,17 @@
 #!/bin/bash
 
-# Function to stop all background processes on exit
-cleanup() {
-    echo "Stopping all processes..."
-    kill $(jobs -p)
-    exit
-}
+# Build the application
+./build.sh
 
-# Set up the cleanup function to run on script exit
-trap cleanup EXIT
+# Check if the binary exists
+if [ ! -f "./seo-analyzer" ]; then
+    echo "Binary not found. Building..."
+    go build -o seo-analyzer backend/cmd/server/main.go
+    if [ $? -ne 0 ]; then
+        echo "Go build failed"
+        exit 1
+    fi
+fi
 
-# Start the Go server
-echo "Starting Go server..."
-go run backend/cmd/server/main.go &
-
-# Use fswatch for file watching on macOS
-echo "Watching frontend files..."
-fswatch -o frontend/public frontend/pages | while read f; do
-    echo "Changes detected, refreshing..."
-done
+# Run the Go server
+./seo-analyzer
