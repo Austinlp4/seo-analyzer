@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/Austinlp4/seo-analyzer/backend/internal/models"
+	"github.com/Austinlp4/seo-analyzer/backend/internal/seo"
 )
 
 func handleAnalyze(w http.ResponseWriter, r *http.Request) {
@@ -16,12 +17,11 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create the result and set the URL
-	result := models.AnalysisResult{
-		URL: req.URL,
+	result, err := seo.Analyze(req.URL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-
-	// Perform analysis here...
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
