@@ -13,6 +13,11 @@ export function ResultsDisplay({ results }) {
         <p><strong>Status Code:</strong> {results.statusCode}</p>
         <p><strong>H1 Count:</strong> {results.h1Count}</p>
         <p><strong>Word Count:</strong> {results.wordCount}</p>
+        <p><strong>Page Load Speed:</strong> {results.pageLoadSpeed.toFixed(2)} seconds</p>
+        <p><strong>Mobile Friendly:</strong> {results.mobileFriendly ? 'Yes' : 'No'}</p>
+        <p><strong>Responsive Design:</strong> {results.responsiveDesign ? 'Yes' : 'No'}</p>
+        <p><strong>SSL Certificate:</strong> {results.sslCertificate ? 'Yes' : 'No'}</p>
+        <p><strong>Meta Robots Content:</strong> {results.metaRobotsContent || 'Not specified'}</p>
       </div>
     </div>
   );
