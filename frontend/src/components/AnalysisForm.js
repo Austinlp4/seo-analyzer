@@ -11,11 +11,23 @@ export function AnalysisForm({ onAnalysisComplete }) {
     setIsLoading(true);
     setError('');
 
+    if (!url) {
+      setError('Please enter a URL');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await axios.post('/api/analyze', { url });
       onAnalysisComplete(response.data);
     } catch (err) {
-      setError('An error occurred while analyzing the URL.');
+      if (err.response) {
+        setError(err.response.data || 'An error occurred while analyzing the URL.');
+      } else if (err.request) {
+        setError('No response received from the server. Please try again.');
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
