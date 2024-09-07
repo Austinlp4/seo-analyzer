@@ -1,8 +1,11 @@
 package auth
 
 import (
+	"log"
 	"time"
 
+	"github.com/Austinlp4/seo-analyzer/backend/internal/database"
+	"github.com/Austinlp4/seo-analyzer/backend/internal/models"
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -52,4 +55,31 @@ func HashPassword(password string) (string, error) {
 func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
+}
+
+func CreateUser(username, password string) error {
+	hashedPassword, err := HashPassword(password)
+	if err != nil {
+		log.Printf("Error hashing password: %v", err)
+		return err
+	}
+
+	log.Printf("Attempting to insert user: %s", username)
+	_, err = database.DB.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", username, hashedPassword)
+	if err != nil {
+		log.Printf("Error inserting user into database: %v", err)
+		return err
+	}
+
+	log.Printf("Successfully created user: %s", username)
+	return nil
+}
+
+func GetUserByUsername(username string) (*models.User, error) {
+	user := &models.User{}
+	err := database.DB.QueryRow("SELECT id, username, password FROM users WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Password)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }

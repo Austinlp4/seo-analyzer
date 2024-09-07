@@ -1,22 +1,39 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 
-	"github.com/Austinlp4/seo-analyzer/backend/internal/api"
+	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
+	"github.com/yourusername/seo-analyzer/backend/internal/api"
+	"github.com/yourusername/seo-analyzer/backend/internal/auth"
+	"github.com/yourusername/seo-analyzer/backend/internal/database"
 )
 
 func main() {
-	mux := http.NewServeMux()
+	// Initialize the database
+	db, err := database.InitDB()
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
 
-	// Register API routes
-	api.RegisterHandlers(mux)
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
 
-	// Serve static files and handle client-side routing
-	mux.HandleFunc("/", api.HandleStaticFiles)
+	router := gin.Default()
 
-	fmt.Println("Server is running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	// Apply middlewares
+	router.Use(api.SecurityHeadersMiddleware())
+	router.Use(api.RateLimitMiddleware(redisClient))
+
+	// Set up routes
+	api.SetupRoutes(router, db)
+	auth.SetupRoutes(router, db)
+
+	// Serve frontend
+	router.Static("/", "./frontend/build")
+
+	log.Fatal(router.Run(":8080"))
 }

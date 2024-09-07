@@ -12,16 +12,24 @@ function App() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-8">SEO Analyzer Tool</h1>
-            {isLoggedIn ? (
-                <>
-                    <AnalysisForm onAnalysisComplete={setResults} />
-                    <ResultsDisplay results={results} />
-                </>
-            ) : (
-                <Auth onLogin={handleLogin} />
-            )}
+        <div className="min-h-screen bg-gray-100">
+            <header className="bg-indigo-600 shadow">
+                <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                    <h1 className="text-3xl font-bold text-white">SEO Analyzer Tool</h1>
+                </div>
+            </header>
+            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                {isLoggedIn ? (
+                    <div className="px-4 py-6 sm:px-0">
+                        <AnalysisForm onAnalysisComplete={setResults} />
+                        {results && <ResultsDisplay results={results} />}
+                    </div>
+                ) : (
+                    <div className="px-4 py-6 sm:px-0">
+                        <Auth onLogin={handleLogin} />
+                    </div>
+                )}
+            </main>
         </div>
     );
 }
