@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Austinlp4/seo-analyzer/backend/internal/models"
+	"automated-seo-analyzer/backend/internal/models"
 )
 
 type Cache struct {

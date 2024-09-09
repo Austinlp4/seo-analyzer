@@ -1,11 +1,15 @@
 package auth
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
-	"github.com/Austinlp4/seo-analyzer/backend/internal/database"
-	"github.com/Austinlp4/seo-analyzer/backend/internal/models"
+	"automated-seo-analyzer/backend/internal/database"
+	"automated-seo-analyzer/backend/internal/models"
+
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -82,4 +86,31 @@ func GetUserByUsername(username string) (*models.User, error) {
 		return nil, err
 	}
 	return user, nil
+}
+
+func GetUserIDFromToken(r *http.Request) (int, error) {
+	tokenString := r.Header.Get("Authorization")
+	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+	claims, err := ValidateToken(tokenString)
+	if err != nil {
+		return 0, err
+	}
+
+	user, err := GetUserByUsername(claims.Username)
+	if err != nil {
+		return 0, err
+	}
+
+	return user.ID, nil
+}
+
+func SetUserInContext(ctx context.Context, username string) context.Context {
+	return context.WithValue(ctx, "username", username)
+}
+
+func GetUserFromContext(ctx context.Context) string {
+	if username, ok := ctx.Value("username").(string); ok {
+		return username
+	}
+	return ""
 }

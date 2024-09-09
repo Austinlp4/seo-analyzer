@@ -13,9 +13,14 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/Austinlp4/seo-analyzer/backend/internal/models"
+	"automated-seo-analyzer/backend/internal/models"
+
 	"golang.org/x/net/html"
 )
+
+type ValidationError struct {
+	Message string
+}
 
 func (e *ValidationError) Error() string {
 	return e.Message

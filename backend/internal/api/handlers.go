@@ -7,14 +7,18 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/Austinlp4/seo-analyzer/backend/internal/auth"
-	"github.com/Austinlp4/seo-analyzer/backend/internal/cache"
-	"github.com/Austinlp4/seo-analyzer/backend/internal/database"
-	"github.com/Austinlp4/seo-analyzer/backend/internal/models"
-	"github.com/Austinlp4/seo-analyzer/backend/internal/seo"
+	"automated-seo-analyzer/backend/internal/auth"
+	"automated-seo-analyzer/backend/internal/database"
+	"automated-seo-analyzer/backend/internal/models"
+	"automated-seo-analyzer/backend/internal/seo"
 )
 
 func handleAnalyze(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req models.AnalysisRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -34,14 +38,6 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check cache
-	cache := cache.GetCache()
-	if cachedResult, found := cache.Get(req.URL); found {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(cachedResult)
-		return
-	}
-
 	result, err := seo.Analyze(req.URL)
 	if err != nil {
 		switch err.(type) {
@@ -56,6 +52,14 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get user ID from the JWT token
+	userID, err := auth.GetUserIDFromToken(r)
+	if err != nil {
+		log.Printf("Error getting user ID from token: %v", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Convert AnalysisResponse to AnalysisResult
 	analysisResult := &models.AnalysisResult{
 		URL:      req.URL,
@@ -63,7 +67,7 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store the analysis result in the database
-	err = database.StoreAnalysisResult(analysisResult)
+	err = database.StoreAnalysisResult(userID, analysisResult)
 	if err != nil {
 		log.Printf("Error storing analysis result: %v", err)
 		// Continue execution, as this error shouldn't prevent sending the result to the client
@@ -74,10 +78,8 @@ func handleAnalyze(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleStaticFiles(w http.ResponseWriter, r *http.Request) {
-	// Serve static files from the React build directory
 	fs := http.FileServer(http.Dir("./frontend/build"))
 
-	// If the file exists, serve it directly
 	if _, err := os.Stat("./frontend/build" + r.URL.Path); err == nil {
 		fs.ServeHTTP(w, r)
 		return
@@ -87,10 +89,15 @@ func HandleStaticFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req models.RegisterRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -105,10 +112,15 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req models.LoginRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -129,6 +141,114 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"token": token})
+}
+
+func handleGetUserAnalyses(w http.ResponseWriter, r *http.Request) {
+	log.Println("Entering handleGetUserAnalyses function")
+
+	// Get user ID from the JWT token
+	userID, err := auth.GetUserIDFromToken(r)
+	if err != nil {
+		log.Printf("Error getting user ID from token: %v", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	log.Printf("User ID retrieved: %d", userID)
+
+	analyses, err := database.GetUserAnalyses(userID)
+	if err != nil {
+		log.Printf("Error fetching user analyses: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Retrieved %d analyses for user", len(analyses))
+
+	// Set headers to prevent caching
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+
+	log.Println("Sending JSON response")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(analyses)
+}
+
+func handleCollectSession(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var sessionData models.SessionData
+	err := json.NewDecoder(r.Body).Decode(&sessionData)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err = database.StoreSessionData(&sessionData)
+	if err != nil {
+		log.Printf("Error storing session data: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func handleCreateProject(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := auth.GetUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	project, err := database.CreateProject(userID, req.Name, req.URL)
+	if err != nil {
+		log.Printf("Error creating project: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(project)
+}
+
+func handleGetUserProjects(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, err := auth.GetUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	projects, err := database.GetUserProjects(userID)
+	if err != nil {
+		log.Printf("Error getting user projects: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(projects)
 }

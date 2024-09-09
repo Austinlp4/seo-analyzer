@@ -2,38 +2,28 @@ package main
 
 import (
 	"log"
+	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
-	"github.com/yourusername/seo-analyzer/backend/internal/api"
-	"github.com/yourusername/seo-analyzer/backend/internal/auth"
-	"github.com/yourusername/seo-analyzer/backend/internal/database"
+	"automated-seo-analyzer/backend/internal/api"
+	"automated-seo-analyzer/backend/internal/database"
 )
 
 func main() {
+	log.Println("Starting SEO Analyzer server")
+
 	// Initialize the database
 	db, err := database.InitDB()
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
+	log.Println("Database connection established")
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
-
-	router := gin.Default()
-
-	// Apply middlewares
-	router.Use(api.SecurityHeadersMiddleware())
-	router.Use(api.RateLimitMiddleware(redisClient))
+	mux := http.NewServeMux()
 
 	// Set up routes
-	api.SetupRoutes(router, db)
-	auth.SetupRoutes(router, db)
+	api.SetupRoutes(mux)
 
-	// Serve frontend
-	router.Static("/", "./frontend/build")
-
-	log.Fatal(router.Run(":8080"))
+	log.Println("Starting server on :8080")
+	log.Fatal(http.ListenAndServe(":8080", mux))
 }

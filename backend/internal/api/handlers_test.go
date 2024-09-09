@@ -7,7 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Austinlp4/seo-analyzer/backend/internal/models"
+	"github.com/gin-gonic/gin"
+
+	"automated-seo-analyzer/backend/internal/models"
 )
 
 func TestHandleAnalyze(t *testing.T) {
@@ -35,8 +37,12 @@ func TestHandleAnalyze(t *testing.T) {
 			// Create a response recorder
 			rr := httptest.NewRecorder()
 
+			// Create a Gin context
+			c, _ := gin.CreateTestContext(rr)
+			c.Request = req
+
 			// Call the handler
-			handleAnalyze(rr, req)
+			handleAnalyze(c)
 
 			// Check the status code
 			if status := rr.Code; status != tt.expectedStatus {
